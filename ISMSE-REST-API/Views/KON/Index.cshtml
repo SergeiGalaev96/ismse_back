@@ -1,0 +1,52 @@
+﻿
+@{
+    ViewBag.Title = "КОН калькулятор";
+}
+
+<h2>КОН калькулятор</h2>
+
+@using(Html.BeginForm())
+{
+	<label>Введите номер заявления: <input type="text" name="regNo" id="regNo" value="@ViewBag.regNo"></label>
+	<button type="submit">Расчитать</button>
+}
+@if(ViewBag.Error != null)
+{
+	<p style="color:red">@ViewBag.Error</p>
+}
+@if(ViewBag.Steps != null)
+{
+	<table class="table">
+		<tr>
+			<th>#</th>
+			<th>Действие</th>
+		</tr>
+		@foreach(var c in ViewBag.Steps)
+		{
+			<tr>
+				<td>@c.no</td>
+				<td>@c.message</td>
+			</tr>
+		}
+	</table>
+}
+@if(ViewBag.Items != null)
+{
+	<table class="table">
+		<tr>
+			<th>Индикатор</th>
+			<th>Коэффициент</th>
+		</tr>
+		@foreach(var c in ViewBag.Items)
+		{
+			<tr>
+				<td>@c.Name</td>
+				<td>@c.Value</td>
+			</tr>
+		}
+	</table>
+	<br><br>
+	<b>КОН: @ViewBag.KONNew</b>
+	<br>
+	<b>Балл: @ViewBag.BALLNew</b>
+}
