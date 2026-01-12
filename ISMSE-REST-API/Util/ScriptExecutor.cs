@@ -22,6 +22,7 @@ using ISMSE_REST_API.Models.Enums;
 using ISMSE_REST_API.Extensions;
 using System.Data;
 using System.Globalization;
+using System.Xml.Linq;
 
 namespace ISMSE_REST_API.Util
 {
@@ -414,6 +415,116 @@ namespace ISMSE_REST_API.Util
             var userObj = DAL.GetCissaUser(userId);
             var context = CreateContext(userObj.UserName, userObj.Id);
             context.Documents.SetDocState(docId, stateTypeId);
+        }
+
+        //public static void ClearExpiredMedacts(Guid docDefId, Guid userId)
+        public static List<Guid> ClearExpiredMedacts(Guid docDefId, Guid userId)
+        {
+            var userObj = DAL.GetCissaUser(userId);
+            if (userObj == null) throw new ApplicationException("Пользователь не найден!");
+
+            var context = CreateContext(userId);
+            var qb = new QueryBuilder(docDefId);
+            qb.Where("&State").Eq("32062CB7-C31C-4AFB-ADF3-F9F9AEEFCE59");//подписанный
+            var query = context.CreateSqlQuery(qb);
+
+            query.AddAttribute("&Id");
+            query.AddAttribute("Person");
+
+            var toExpiredMedActs = new List<Guid>();
+            var toExpiredPersons = new List<Guid>();
+            var noDateIds = new List<Guid>();
+            using (var reader = context.CreateSqlReader(query))
+            {
+                while (reader.Read())
+                {
+                    var id = reader.GetGuid(0);
+                    var signedMedAct = context.Documents.LoadById(id);
+                    if (((Boolean?)signedMedAct["Indefinitely"] ?? false) == false) {
+                        if (signedMedAct["ExamDateTo"] != null)
+                        {
+                            if ((DateTime)signedMedAct["ExamDateTo"] < DateTime.Today.AddYears(-1))
+                            {
+                                toExpiredMedActs.Add(signedMedAct.Id);
+                                toExpiredPersons.Add(reader.GetGuid(1));
+                            }
+                        }
+                        else
+                        {
+                            noDateIds.Add(signedMedAct.Id);
+                        }
+                    }
+                }
+            }
+
+            var toArchiveMedActs = new List<Guid>();
+            qb = new QueryBuilder(docDefId);
+            var expiredStateTypeId = new Guid("D203372C-236B-4B3E-953A-11F09A4ACA61");
+            qb.Where("&State").Eq(expiredStateTypeId);//истекший
+            query = context.CreateSqlQuery(qb);
+            query.AddAttribute("&Id");
+
+            using (var reader = context.CreateSqlReader(query))
+            {
+                while (reader.Read())
+                {
+                    var id = reader.GetGuid(0);
+                    toArchiveMedActs.Add(id);
+
+                }
+            }
+
+            var toExpiredIPRs = GetMedactIPRs(toExpiredMedActs.ToArray(), userId);
+            var toArchiveIPRs = GetMedactIPRs(toArchiveMedActs.ToArray(), userId);
+
+
+            // SetState for all Docs
+            foreach (var id in toExpiredMedActs)
+                {
+                    SetState(id, expiredStateTypeId, userId);
+                }
+            foreach (var id in toExpiredIPRs)
+            {
+                SetState(id, expiredStateTypeId, userId);
+            }
+
+            var archiveStateTypeId = new Guid("D5B97FA0-9D87-4FB8-BDF1-B2F118D42640");
+
+            foreach (var id in toArchiveMedActs)
+            {
+                SetState(id, archiveStateTypeId, userId);
+            }
+            foreach (var id in toArchiveIPRs)
+            {
+                SetState(id, archiveStateTypeId, userId);
+            }
+
+
+            return noDateIds;
+
+        }
+        public static List<Guid> GetMedactIPRs(Guid[] medActIds, Guid userId)
+        {
+            var iprDefId = new Guid("38CBA2D5-9783-4B85-9D8E-40A5384765CB");
+            var userObj = DAL.GetCissaUser(userId);
+            if (userObj == null) throw new ApplicationException("Пользователь не найден!");
+
+            var context = CreateContext(userId);
+            var qb = new QueryBuilder(iprDefId);
+            qb.Where("AdultsMedicalCart").In(medActIds.Cast<object>().ToArray());
+            var query = context.CreateSqlQuery(qb);
+            query.AddAttribute("&Id");
+
+            var expiredIPRs = new List<Guid>();
+            using (var reader = context.CreateSqlReader(query))
+            {
+                while (reader.Read())
+                {
+                    var id = reader.GetGuid(0);
+                    expiredIPRs.Add(id);
+                }
+            }
+            return expiredIPRs;
         }
 
         public static int CountDocumentsByDefId(Guid docDefId, Guid userId)

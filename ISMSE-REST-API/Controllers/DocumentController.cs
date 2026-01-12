@@ -168,21 +168,23 @@ namespace ISMSE_REST_API.Controllers
         }
 
         [HttpPost]
-        public HttpResponseMessage CreateWithNo([FromUri] Guid defId, [FromUri]Guid userId, [FromUri]string noAttrName, [FromBody] document document)
+        public IHttpActionResult CreateWithNo([FromUri] Guid defId, [FromUri]Guid userId, [FromUri]string noAttrName, [FromBody] document document)
         {
             try
             {
                 var docId = ScriptExecutor.CreateDocument(defId, document, userId, true, noAttrName);
                 document.id = docId;
-                var response = Request.CreateResponse(HttpStatusCode.Created, document);
+                //var response = Request.CreateResponse(HttpStatusCode.Created, document);
 
-                string uri = Url.Link("DefaultApi", new { action = "GetDocumentById", id = document.id });
-                response.Headers.Location = new Uri(uri);
-                return response;
+                //string uri = Url.Link("DefaultApi", new { action = "GetDocumentById", id = document.id });
+                //response.Headers.Location = new Uri(uri);
+                //return response;
+                return Ok(OperationResult.Success(document));
             }
             catch (Exception e)
             {
-                return Request.CreateResponse(HttpStatusCode.BadRequest, e);
+                return Ok(OperationResult.Failure(e.GetBaseException().Message));
+                //return Request.CreateResponse(HttpStatusCode.BadRequest, e);
             }
         }
 
@@ -299,6 +301,8 @@ namespace ISMSE_REST_API.Controllers
                 return Ok(OperationResult.Failure(e.GetBaseException().Message));
             }
         }
+
+
         public class SetMultipleDocsToStateRequest
         {
             public Guid[] docIdList { get; set; }
@@ -313,13 +317,15 @@ namespace ISMSE_REST_API.Controllers
                 {
                     ScriptExecutor.SetState(docId, docsToState.stateTypeId, userId);
                 }
-                return Ok(new { result = true });
+                return Ok(OperationResult.Success());
+                //return Ok(new { result = true });
             }
             catch (Exception e)
             {
-                return BadRequest(e.GetBaseException().Message);
+                return Ok(OperationResult.Failure(e.GetBaseException().Message));
             }
         }
+
 
         [HttpGet]
         [ResponseType(typeof(Guid))]
@@ -333,6 +339,21 @@ namespace ISMSE_REST_API.Controllers
             catch (Exception e)
             {
                 return BadRequest(e.GetBaseException().Message);
+            }
+        }
+
+        [HttpGet]
+        [ResponseType(typeof(OperationResult))]
+        public IHttpActionResult ClearExpiredMedacts([FromUri] Guid docDefId, Guid userId)
+        {
+            try
+            {
+                var result = ScriptExecutor.ClearExpiredMedacts(docDefId, userId);
+                return Ok(OperationResult.Success(result));
+            }
+            catch (Exception e)
+            {
+                return Ok(OperationResult.Failure(e.GetBaseException().Message));
             }
         }
 
