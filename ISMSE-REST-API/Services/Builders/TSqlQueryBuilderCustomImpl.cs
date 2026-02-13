@@ -102,7 +102,7 @@ namespace ISMSE_REST_API.Services.Builders
         const string SELECT_TOP_20 = "SELECT TOP 20";
         const string SELECT = "SELECT";
         const string T_SQL_GET_DATA_MSEC_GROWN = @"
-        [*Person].[Last_Name] 'Фамилия',
+                [*Person].[Last_Name] 'Фамилия',
         [*Person].[First_Name] 'Имя',
         [*Person].[Middle_Name] 'Отчество',
         [*Person].[Date_of_Birth] 'Д.р.',
@@ -151,6 +151,7 @@ namespace ISMSE_REST_API.Services.Builders
         [*AdultsMedicalCart].[Wage] as 'Среднемесячный заработок в последний год',
         [*AdultsMedicalCart].[PlaceOfWork] as 'Место работы',
         [*AdultsMedicalCart].[Position] as 'Должность',
+		militaryIndustryAttrText.Full_Name as 'Наименование правоохранительных органов и силовых структур',
         [*AdultsMedicalCart].[ReferenceNumber] as '№/Серия справки',
         [*AdultsMedicalCart].[SickListType] as 'Вид',
         [*AdultsMedicalCart].[SickListPeriodTo] as 'Период по',
@@ -579,6 +580,8 @@ FROM
 		left outer join [msec-meta].dbo.Object_Defs DiagnosisText on DiagnosisText.Id = [*AdultsMedicalCart].[Diagnosis]
 		left outer join [msec-meta].dbo.Object_Defs ConfirmationExistenceText on ConfirmationExistenceText.Id = [*AdultsMedicalCart].[ConfirmationExistence]
 		left outer join [msec-meta].dbo.Persons status_users on status_users.Id = [*AdultsMedicalCart].[StatusAuthorUserId]
+		left join [msec-data].dbo.Enum_Attributes militaryIndustryAttr on militaryIndustryAttr.Def_Id='CE476C4D-5F14-4C68-9771-09BC15C3D74C' and militaryIndustryAttr.Expired='99991231' and militaryIndustryAttr.Document_Id=[*AdultsMedicalCart].Id
+		left outer join [msec-meta].dbo.Object_Defs militaryIndustryAttrText on militaryIndustryAttrText.Id = militaryIndustryAttr.[Value]
 ";
         const string T_SQL_GET_DATA_MSEC_CHILD = @"
         [*Person].[Last_Name] 'Фамилия',
